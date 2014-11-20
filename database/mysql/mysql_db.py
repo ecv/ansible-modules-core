@@ -136,10 +136,10 @@ def db_dump(module, host, user, password, db_name, target, port, master_data=Non
         cmd += " --socket=%s" % pipes.quote(socket)
     else:
         cmd += " --host=%s --port=%s" % (pipes.quote(host), pipes.quote(port))
-    if db_name is None:
-        cmd += " --all-databases"
-    else:
+    if db_name is not None:
         cmd += " %s" % pipes.quote(db_name)
+    else:
+        cmd += " --all-databases"
     if os.path.splitext(target)[-1] == '.gz':
         cmd = cmd + ' | gzip > ' + pipes.quote(target)
     elif os.path.splitext(target)[-1] == '.bz2':
