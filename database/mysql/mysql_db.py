@@ -136,7 +136,10 @@ def db_dump(module, host, user, password, db_name, target, port, master_data, so
         cmd += " --socket=%s" % pipes.quote(socket)
     else:
         cmd += " --host=%s --port=%s" % (pipes.quote(host), pipes.quote(port))
-    cmd += " %s" % pipes.quote(db_name)
+    if db_name is None:
+        cmd += " --all-databases"
+    else:
+        cmd += " %s" % pipes.quote(db_name)
     if os.path.splitext(target)[-1] == '.gz':
         cmd = cmd + ' | gzip > ' + pipes.quote(target)
     elif os.path.splitext(target)[-1] == '.bz2':
@@ -156,7 +159,8 @@ def db_import(module, host, user, password, db_name, target, port, socket=None):
         cmd += " --socket=%s" % pipes.quote(socket)
     else:
         cmd += " --host=%s --port=%s" % (pipes.quote(host), pipes.quote(port))
-    cmd += " -D %s" % pipes.quote(db_name)
+    if db_name is not None:
+        cmd += " -D %s" % pipes.quote(db_name)
     if os.path.splitext(target)[-1] == '.gz':
         gunzip_path = module.get_bin_path('gunzip')
         if gunzip_path:
@@ -272,7 +276,7 @@ def main():
             login_host=dict(default="localhost"),
             login_port=dict(default="3306"),
             login_unix_socket=dict(default=None),
-            name=dict(required=True, aliases=['db']),
+            name=dict(required=False, aliases=['db']),
             encoding=dict(default=""),
             collation=dict(default=""),
             master_data=dict(default="0", choices=["0", "1", "2"]),
@@ -315,7 +319,10 @@ def main():
     if state in ['dump','import']:
         if target is None:
             module.fail_json(msg="with state=%s target is required" % (state))
-        connect_to_db = db
+        if db is None:
+          connect_to_db = 'mysql'
+        else:
+          connect_to_db = db
     else:
         connect_to_db = 'mysql'
     try:
@@ -331,10 +338,10 @@ def main():
                 errno, errstr = e.args
                 module.fail_json(msg="ERROR: %s %s" % (errno, errstr))
         else:
-                module.fail_json(msg="unable to connect, check login_user and login_password are correct, or alternatively check ~/.my.cnf contains credentials")
+                module.fail_json(msg="unable to connect to '%s', check login_user and login_password are correct, or alternatively check ~/.my.cnf contains credentials" % connect_to_db)
 
     changed = False
-    if db_exists(cursor, db):
+    if db_exists(cursor, connect_to_db):
         if state == "absent":
             try:
                 changed = db_delete(cursor, db)
