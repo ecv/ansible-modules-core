@@ -127,10 +127,10 @@ def db_delete(cursor, db):
     cursor.execute(query)
     return True
 
-def db_dump(module, host, user, password, db_name, target, port, master_data, socket=None):
+def db_dump(module, host, user, password, db_name, target, port, master_data=None, socket=None):
     cmd = module.get_bin_path('mysqldump', True)
     cmd += " --quick --user=%s --password=%s" % (pipes.quote(user), pipes.quote(password))
-    if master_data is not "0":
+    if master_data:
         cmd += " --master-data=%s" % pipes.quote(master_data)
     if socket is not None:
         cmd += " --socket=%s" % pipes.quote(socket)
