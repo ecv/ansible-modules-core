@@ -74,6 +74,11 @@ options:
       - Encoding mode
     required: false
     default: null
+  master_data:
+    description:
+      - Produce a dump from a master for seeding a slave (at 1; 2 for commented)
+    required: false
+    default: 0
   target:
     description:
       - Location, on the remote host, of the dump file to read from or write to. Uncompressed SQL
@@ -122,9 +127,11 @@ def db_delete(cursor, db):
     cursor.execute(query)
     return True
 
-def db_dump(module, host, user, password, db_name, target, port, socket=None):
+def db_dump(module, host, user, password, db_name, target, port, master_data, socket=None):
     cmd = module.get_bin_path('mysqldump', True)
     cmd += " --quick --user=%s --password=%s" % (pipes.quote(user), pipes.quote(password))
+    if master_data is not "0":
+        cmd += " --master-data=%s" % pipes.quote(master_data)
     if socket is not None:
         cmd += " --socket=%s" % pipes.quote(socket)
     else:
@@ -268,6 +275,7 @@ def main():
             name=dict(required=True, aliases=['db']),
             encoding=dict(default=""),
             collation=dict(default=""),
+            master_data=dict(default="0", choices=["0", "1", "2"]),
             target=dict(default=None),
             state=dict(default="present", choices=["absent", "present","dump", "import"]),
         )
@@ -281,6 +289,7 @@ def main():
     collation = module.params["collation"]
     state = module.params["state"]
     target = module.params["target"]
+    master_data = module.params["master_data"]
 
     # make sure the target path is expanded for ~ and $HOME
     if target is not None:
@@ -335,6 +344,7 @@ def main():
             rc, stdout, stderr = db_dump(module, login_host, login_user, 
                                         login_password, db, target, 
                                         port=module.params['login_port'],
+                                        master_data=module.params['master_data'],
                                         socket=module.params['login_unix_socket'])
             if rc != 0:
                 module.fail_json(msg="%s" % stderr)
